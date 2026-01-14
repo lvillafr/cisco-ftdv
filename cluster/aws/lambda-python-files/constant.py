@@ -1,5 +1,5 @@
 """
-Copyright (c) 2023 Cisco Systems Inc or its affiliates.
+Copyright (c) 2025 Cisco Systems Inc or its affiliates.
 
 All Rights Reserved.
 
@@ -37,6 +37,7 @@ ENI_NAME_OF_DIAG_INTERFACE = "-diag-interface-"
 
 ENI_NAME_OF_INTERFACE_2 = "-data-interface-2"
 ENI_NAME_OF_INTERFACE_3 = "-data-interface-3"
+ENI_NAME_OF_INTERFACE_4 = "-data-interface-4"
 
 FTDV_SSH_PORT = 22
 
