@@ -1,5 +1,5 @@
 """
-Copyright (c) 2023 Cisco Systems Inc or its affiliates.
+Copyright (c) 2025 Cisco Systems Inc or its affiliates.
 
 All Rights Reserved.
 
@@ -119,8 +119,8 @@ def handle_cron_event(event):
             asg_instance_name = append_str + asg_instance_id
             aws_instance_name_list.append(asg_instance_name)
             dict_asg[asg_instance_name] = instance_ip
-    logger.debug("Autoscale Group Instance names = {}".format(dict_asg)) 
-    logger.debug("Autoscale Group Instance IPs = {}".format(asg_group_ips))    
+    logger.debug("Autoscale Group Instance names = {}".format(dict_asg))
+    logger.debug("Autoscale Group Instance IPs = {}".format(asg_group_ips))
     # FMC class initialization
     fmc = FirepowerManagementCenter(user_input['FmcServer'], user_input['FmcMetUserName'], user_input['FmcMetPassword'])
     try:
@@ -144,8 +144,6 @@ def handle_cron_event(event):
         query_device_dict = dict(zip(fmc_devices_list, device_id_list))
 
         logger.info("Instances present in both FMC, AWS AutoScale Group  = {}".format(common_values_from_dict))
-        
-        #intersection_list = utl.intersection(aws_instance_name_list, fmc_devices_list)
         intersection_list = []
         for common_ip in range(len(common_values_from_dict)):
             intersection_list.append(list(ftd_hostnames.keys())[list(ftd_hostnames.values()).index(common_values_from_dict[common_ip])])
@@ -184,7 +182,6 @@ def handle_cron_event(event):
         logger.info("Memory Metric per FTDv: " + json.dumps(ftdv_memory_metric_dict, separators=(',', ': ')))
         logger.info("Metrics published: " + json.dumps(pair_of_metric_name_value, separators=(',', ': ')))
         #####Deleting junk nodes from FMC######
-        
         if const.DELETE_JUNK_NODES_FROM_FMC:
             ## If more nodes in FMC than valid common nodes in AWS Group and FMC, delete junk nodes from FMC
             if len(device_id_list) > len(common_values_from_dict):
@@ -194,7 +191,7 @@ def handle_cron_event(event):
                     if junk_node not in asg_group_ips:
                         extra_node = list(ftd_hostnames.keys())[list(ftd_hostnames.values()).index(junk_node)]
                         logger.debug("Junk node in FMC Cluster: " + str(extra_node))
-                        junk_list.append(extra_node)      
+                        junk_list.append(extra_node)
                 if len(junk_list) > 0:
                     logger.info("List of Junk nodes in FMC Cluster: " + str(junk_list))
                     fmc.get_auth_token()
