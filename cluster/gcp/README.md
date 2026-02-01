@@ -1,68 +1,103 @@
-# Clustering for the Threat Defense Virtual in a Public Cloud
-Clustering lets you group multiple threat defense virtuals together as a single logical device. A cluster provides
-all the convenience of a single device (management, integration into a network) while achieving the increased
-throughput and redundancy of multiple devices. You can deploy threat defense virtual clusters in a public
-cloud using Amazon Web Services (AWS) or Google Cloud Platform (GCP) or AZURE. Only routed firewall mode is
-supported. <br>
-<br>
-NOTE: From version 7.4.1 onwards, users can deploy FTDv-cluster without the Diagnostic interface (Outside, Inside, Management, CCL). <br>
-To do so, ensure that the "withDiagnostic" variable is set to False in both the infrastructure.yaml file and the respective deploy_ngfw_cluster.yaml files (either north-south/deploy_ngfw_cluster.yaml or east-west/deploy_ngfw_cluster.yaml). <br>
+# Clustering Autoscale for the Threat Defense Virtual in GCP Cloud
 
-# Cloud Formation Template Deployment
-## Prerequisites:
-Deployment can be run on any macOS/Linux/Windows machine with Google SDK installed OR using google cloud shell. <br>
+Clustering enables you to group multiple Threat Defense Virtual (FTDv) devices into a single logical unit. This provides the convenience of managing a single device while achieving increased throughput and redundancy from multiple devices. Our updated solution now supports autoscaling, which ensures optimal performance and resource utilization based on demand fluctuations.
 
-## Pre-deployment Steps:
-Step-1: Edit "infrastructure.yaml" , "cluster_function_infra.yaml" and "north-south/deploy_ngfw_cluster.yaml" or "east-west/deploy_ngfw_cluster.yaml" as applicable for resourceNamePrefix and provide required user inputs.<br>
-e.g: resourceNamePrefix = ngfwvcls <br>
+> **NOTE:** Starting with version 7.4.1, you can deploy FTDv clusters without the Diagnostic interface (Outside, Inside, Management, CCL).  
+> To use this capability, set the `with_diagnostic` variable to `False` in your cluster deployment parameters.
 
-Step-2: Create Bucket with name "ngfwvcls-ftdv-cluster-bucket" for uploading google function src archieve "ftdv_cluster_function.zip" file <br>
-a) Create Bucket using below CLI on Google Cloud Shell:<br>
+## Deployment Flow
 
-	'gsutil mb --pap enforced gs://ngfwvcls-ftdv-cluster-bucket/'
-<br>
-b) Create zip using below CLI for macOS/Linux user:<br>
+### Prerequisites
+- Terraform (version 1.7.0 or newer)
+- Google Cloud SDK installed locally or access to GCP Cloud Shell
+- Service account with appropriate permissions for resource creation
 
-	'zip -j ftdv_cluster_function.zip ./cluster-function/*'
-<br>
-	Note: if bucket name is different then edit cluster_function_infra.yaml in pre-deployment step.<br>
-c) Upload google function src archieve to bucket using below CLI on Google Cloud Shell:<br>
+### Deployment Option 1: Using GCP Infrastructure Manager
 
-	'gsutil cp ftdv_cluster_function.zip gs://ngfwvcls-ftdv-cluster-bucket'
-<br>
-	Note: if src archieve name is different then edit cluster_function_infra.yaml in pre-deployment step.<br>
+Execute the following CLI command to deploy using GCP Infrastructure Manager:
 
-## Deployment Steps:
-Step-3: <br>
-To deploy without the Diagnostic network interface, ensure that the "withDiagnostic" variable is set to False in the infrastructure.yaml file. <br>
-Deploy infrastructure for FTDv cluster using below CLI on Google Cloud Shell: <br>
+```sh
+gcloud infra-manager deployments \
+	apply "projects/YOUR_PROJECT_ID/locations/YOUR_REGION/deployments/YOUR_DEPLOYMENT_NAME" \
+	--location="YOUR_REGION" \
+	--git-source-repo="<repo name>" \
+	--git-source-directory="<infrastructure / cluster_deployment>" \
+	--git-source-ref="<branch name>" \
+	--service-account="projects/YOUR_PROJECT_ID/serviceAccounts/YOUR_SERVICE_ACCOUNT" \
+	--artifacts-gcs-bucket="gs://YOUR_BUCKET_NAME/artifacts" \
+	--inputs-file="/path/to/your/infra.tfvars"  
+```
 
-	'gcloud deployment-manager deployments create <name> --config infrastructure.yaml'
-<br>
-Step-4:<br>
-a) Launch and setup FMCv with FTDv management vpc if working with private IP<br>
-b) Create vpcConnector for Cloud Functions with FTDv management vpc, use it in step-5:<br>
+**Note:** Sample `tfvars` files are available in each respective directory for reference.
 
-	'gcloud compute networks vpc-access connectors create <name> --region us-central1 --subnet ngfwvcls-ftdv-mgmt-subnet28'
-<br>
-	Note: vpcConnector Name will be  used in cluster_function_infra.yaml as an input for vpcConnectorName.<br>
+### Deployment Option 2: Using Local Terraform
 
-Step-5: <br>
- Make sure to set "deployWithExternalIP" as True in cluster_function_infra.yaml if FTDv require external IP. Deploy FTDv cluster google function using below CLI on Google Cloud Shell:<br>
+#### Step 1: Configure Authentication
 
-	'gcloud deployment-manager deployments create <name> --config cluster_function_infra.yaml'
-<br>
-Step-6: <br>
-To deploy without the Diagnostic network interface, ensure that the "withDiagnostic" variable is set to False in the deploy_ngfw_cluster.yaml file. <br>
-Make sure to set variable "deployUsingExternalIP" as 1 in deploy_ngfw_cluster.yaml if FTDv require external IP. <br>
-Deploy FTDv cluster using below CLI on Google Cloud Shell:<br>
-a) For North-South topology deployment<br>
+Set up your credentials using one of these methods:
 
-	'gcloud deployment-manager deployments create <name> --config north-south/deploy_ngfw_cluster.yaml'
-<br>
+```sh
+# Option A: Login with your user account
+gcloud auth application-default login  
 
-b) For East-West topology deployment<br>
+# Option B: Use a service account key
+export GOOGLE_APPLICATION_CREDENTIALS="/path/to/service-account.json"  
+```
 
-	'gcloud deployment-manager deployments create <name> --config east-west/deploy_ngfw_cluster.yaml'
-<br>
+#### Step 2: Deploy Infrastructure
 
+**Note:** You can either use our infrastructure template to create VPC, subnets, and firewall rules, or provide your existing resource names directly in the cluster deployment.
+
+Configure and deploy the infrastructure:
+
+```bash
+# 1. Edit infrastructure parameters
+cd FTDV/infrastructure
+# Modify infrastructure_params.tfvars with your settings
+
+# 2. Deploy infrastructure
+terraform init
+terraform apply -var-file=infrastructure_params.tfvars
+```
+
+#### Step 3: Create Required Secrets
+
+For FTDv deployments, create Secret Manager secrets for your passwords:
+
+```bash
+# Create FTDv password secret
+gcloud secrets create ftdv-password --replication-policy="automatic"
+echo -n "your-ftdv-password" | gcloud secrets versions add ftdv-password --data-file=-
+
+# Create FMC password secret
+gcloud secrets create fmc-password --replication-policy="automatic"
+echo -n "your-fmc-password" | gcloud secrets versions add fmc-password --data-file=-
+```
+
+#### Step 4: Deploy the Cluster
+
+Configure and deploy your cluster:
+
+```bash
+cd FTDV/cluster_deployment
+# Modify cluster_params.tfvars with your settings
+
+terraform init
+terraform apply -var-file=cluster_params.tfvars
+```
+
+### Cleaning Up Resources
+
+To remove all deployed resources:
+
+```bash
+# 1. First remove the cluster
+cd FTDV/cluster_deployment
+terraform destroy -var-file=cluster_params.tfvars
+
+# 2. Then remove the infrastructure
+cd FTDV/infrastructure
+terraform destroy -var-file=infrastructure_params.tfvars
+```
+
+**Note:** Deployments performed via GCP Infrastructure Manager are visible in the GCP console, allowing you to easily list and verify all deployed resources. These can be cleaned up directly from the GCP UI. In contrast, local Terraform deployments must be managed through Terraform state files and will not appear in the Infrastructure Manager section of the GCP console.
