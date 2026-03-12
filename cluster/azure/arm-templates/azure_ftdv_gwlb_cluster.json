@@ -164,10 +164,10 @@
       },
       "ftdLicensingSku" : {
         "type" : "string",
-        "defaultValue" : "payg",
+        "defaultValue" : "ftdv-azure-byol",
         "allowedValues" : [
-            "byol",
-            "payg"
+            "ftdv-azure-byol",
+            "ftdv-azure-payg"
         ],
         "metadata" : {
             "description" : "Licensing model (ftdv-azure-byol : Bring-your-own-license, ftdv-azure-payg : Pay-as-you-go)"
@@ -245,7 +245,7 @@
       },
       "autoscaling": {
         "type": "string",
-        "defaultValue": "Enable",
+        "defaultValue": "Disable",
         "allowedValues": [
             "Enable",
             "Disable"
@@ -310,7 +310,7 @@
       },
        "ftdvNodeCount": {
         "type": "int",
-        "defaultValue": 1,
+        "defaultValue": 3,
         "minValue": 1,
         "maxValue": 16,
         "metadata": {
@@ -458,7 +458,7 @@
                      "destinationPortRange": "22",
                      "sourceAddressPrefix": "[if(equals(variables('functionHostingPlanType'), 'premium'), reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).ipAddress, concat('AzureCloud.', resourceGroup().location))]",
                      "destinationAddressPrefix": "*",
-                     "access": "Allow",
+                     "access": "Deny",
                      "priority": 100,
                      "direction": "Inbound"
                   }
@@ -472,7 +472,7 @@
                      "destinationPortRange": "443",
                      "sourceAddressPrefix": "[if(equals(variables('functionHostingPlanType'), 'premium'), reference(resourceId('Microsoft.Network/publicIPAddresses', variables('publicIpAddressName'))).ipAddress, concat('AzureCloud.', resourceGroup().location))]",
                      "destinationAddressPrefix": "*",
-                     "access": "Allow",
+                     "access": "Deny",
                      "priority": 101,
                      "direction": "Inbound"
                   }
@@ -708,12 +708,13 @@
         ],
         "properties": {
           "enabled": true,
+											
           "reserved": true,
           "serverFarmId": "[if(equals(variables('functionHostingPlanType'), 'premium'), resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName')), json('null'))]",
           "virtualNetworkSubnetId": "[if(equals(variables('functionHostingPlanType'), 'premium'), variables('functionAppSubnetId'), json('null'))]",
           "vnetRouteAllEnabled": true,
           "siteConfig": {
-            "linuxFxVersion": "Python|3.11",
+            "linuxFxVersion": "Python|3.13",
             "appSettings": [
               {
                 "name": "AzureWebJobsDashboard",
